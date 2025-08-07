@@ -10,9 +10,9 @@
 
 ## Вариант A: Удалённый IDE через браузер (code-server + SSH tunnel)
 
-Ничего не требуется на рабочем ПК, кроме браузера.
+Ничего не требуется на рабочем ПК, кроме браузера. Подходит для домашнего macOS и рабочего Linux.
 
-### Шаг 1. Домашний ПК — установка code-server (без sudo)
+### Шаг 1. Домашний ПК (macOS) — установка code-server (без sudo)
 ```bash
 chmod +x remote-ide/install_code_server_home.sh
 ./remote-ide/install_code_server_home.sh
@@ -43,7 +43,7 @@ chmod +x remote-ide/start_tunnel_localhostrun.sh
 
 ## Вариант B: Syncthing portable (без sudo)
 
-Позволяет синхронизировать папки локально на обоих ПК без установки в систему.
+Подходит для macOS (дом) и Linux (работа). Бинарники ставятся в `~/.local/bin` у каждого пользователя.
 
 ### Установка/запуск (оба ПК)
 ```bash
