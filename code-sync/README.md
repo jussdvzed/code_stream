@@ -1,126 +1,90 @@
-# Code Sync Toolkit
+# Code Sync Toolkit (без установки на рабочем ПК)
 
-Два проверенных варианта, чтобы без мессенджеров синхронизировать код между домашним и рабочим ПК:
+Синхронизация/доступ к коду между домом и работой без установки ПО и без sudo на рабочем ПК.
 
-- Вариант A (рекомендуется, проще): Syncthing — P2P синхронизация любой папки, шифрование, версионность, без облака.
-- Вариант B: Git через приватную сеть (Tailscale) — собственный Git-репозиторий на домашнем ПК, push/pull с рабочего ПК.
+- Вариант A (нулевая установка на работе — рекомендуется): удалённый IDE в браузере.
+  - Дома поднимаем `code-server` (VS Code в браузере) и публикуем через обратный SSH‑туннель (`localhost.run`).
+  - На работе: открываете выданный URL в браузере, редактируете код удалённо.
+- Вариант B: P2P‑синк (Syncthing portable) без sudo.
+  - Запуск бинарника Syncthing из домашней папки пользователя на обоих ПК. Никаких системных установок.
 
-Оба варианта не требуют доступа к ChatGPT на работе и работают поверх обычного интернета.
+## Вариант A: Удалённый IDE через браузер (code-server + SSH tunnel)
 
-## Вариант A: Syncthing (P2P)
+Ничего не требуется на рабочем ПК, кроме браузера.
 
-Подходит, если хотите просто «общую папку» с авто‑синком и версионностью файлов. Git можно использовать поверх (рекомендуется), но не обязателен.
-
-### Установка (Linux)
-Запустите по очереди на каждом ПК:
-
+### Шаг 1. Домашний ПК — установка code-server (без sudo)
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/syncthing/syncthing/main/packaging/scripts/syncthing-install.sh)
+chmod +x remote-ide/install_code_server_home.sh
+./remote-ide/install_code_server_home.sh
+```
+Скрипт поставит `code-server` в `~/.local` и создаст конфиг с паролем. Пароль выведется в консоль.
+
+Запуск IDE:
+```bash
+~/.local/bin/code-server
+# Откройте локально: http://127.0.0.1:8080 (для проверки)
 ```
 
-Либо воспользуйтесь нашими скриптами:
-
+### Шаг 2. Домашний ПК — открыть публичный URL через обратный туннель
 ```bash
-chmod +x syncthing/install_syncthing_linux.sh
-./syncthing/install_syncthing_linux.sh
+chmod +x remote-ide/start_tunnel_localhostrun.sh
+./remote-ide/start_tunnel_localhostrun.sh
 ```
+Скрипт создаст публичный URL вида `https://xxxxx.lhr.life` (или схожий), выводит его в консоль.
 
-Включите автозапуск как user‑сервис:
+### Шаг 3. Рабочий ПК — просто открыть URL в браузере
+- Введите пароль от `code-server` (из шага 1).
+- Работаете как в VS Code, файлы остаются дома.
 
+Примечания:
+- Никаких установок/админ‑прав на работе.
+- Для постоянной работы можно держать оба процесса запущенными (IDE + SSH туннель). При разрыве интернет‑соединения перезапустите туннель.
+- Альтернативы для туннеля: `serveo.net`, свой VPS с `ssh -R`, `cloudflared` (при желании).
+
+## Вариант B: Syncthing portable (без sudo)
+
+Позволяет синхронизировать папки локально на обоих ПК без установки в систему.
+
+### Установка/запуск (оба ПК)
 ```bash
-./syncthing/syncthing_service_enable.sh
-```
+chmod +x syncthing/install_syncthing_user.sh
+./syncthing/install_syncthing_user.sh
 
-Syncthing Web UI: http://127.0.0.1:8384
+# Запуск в фоне (user):
+./syncthing/run_user.sh
+```
+Web UI: http://127.0.0.1:8384
 
 ### Настройка папки
-1. На обоих ПК создайте папку для синхронизации, например `~/code-sync`:
+1. Создайте папку для синка, например `~/code-sync`:
    ```bash
    mkdir -p "$HOME/code-sync"
    ```
-2. В Web UI на домашнем ПК добавьте папку `~/code-sync` (плюс «папка»), включите File Versioning (Simple/Trash Can) по вкусу.
-3. Скопируйте Device ID рабочего ПК (в Web UI), добавьте устройство и поделитесь с ним папкой.
-4. Примите приглашение на рабочем ПК. Готово — папка будет синхронизироваться.
+2. В Web UI на домашнем ПК добавьте папку `~/code-sync`, включите версионность по вкусу.
+3. Скопируйте Device ID второго ПК, обменяйтесь устройствами и папкой, примите приглашение.
 
-### Windows / macOS
-- Windows: установщик с сайта Syncthing (`https://syncthing.net`), автозапуск через планировщик или NSSM.
-- macOS: `brew install syncthing && brew services start syncthing`.
-
-## Вариант B: Git через Tailscale (собственный Git‑сервер дома)
-
-Подходит, если рабочий процесс — через Git и важны ревью/ветки/коммиты. Данные остаются у вас, доступ по приватной сети Tailscale.
-
-### Шаг 1. Установка Tailscale (оба ПК)
-Linux:
-```bash
-chmod +x tailscale/install_tailscale_linux.sh
-./tailscale/install_tailscale_linux.sh
-```
-Затем авторизуйтесь по ссылке, команда подскажет.
-
-Windows/macOS: установите клиент Tailscale с сайта и войдите в аккаунт.
-
-Проверьте, что оба устройства видят друг друга:
-```bash
-tailscale status | cat
-```
-
-### Шаг 2. Домашний ПК — развёртывание bare‑репозитория
-```bash
-sudo bash git/setup_home_git_server.sh myproject
-```
-Скрипт:
-- создаст системного пользователя `git` (без shell);
-- сгенерирует SSH ключ (или использует ваш);
-- создаст репозиторий `/srv/git/myproject.git` (bare);
-- выведет путь к публичному ключу для добавления на рабочем ПК.
-
-### Шаг 3. Рабочий ПК — добавление удалённого репозитория
-В каталоге вашего проекта:
-```bash
-bash git/add_remote_on_work.sh myproject <TAILSCALE_IP_HOME>
-```
-Пример:
-```bash
-bash git/add_remote_on_work.sh myproject 100.101.102.103
-```
-Это добавит `origin` вида:
-`ssh://git@100.101.102.103/srv/git/myproject.git`
-
-Дальше обычный Git‑поток:
-```bash
-git push -u origin main
-# и затем git pull / git push
-```
-
-### Где взять Tailscale IP дом. ПК?
-На домашнем ПК:
-```bash
-tailscale ip -4 | head -n1 | cat
-```
-
-## Что выбрать?
-- Хотите «как папка Dropbox», без доп. инструментов — берите Syncthing.
-- Используете Git и хотите full‑git без облака — берите Tailscale+Git.
+Примечания:
+- Не требует sudo. Бинарник лежит в `~/.local/bin/syncthing`.
+- Опционально добавьте автозапуск через `systemd --user`, если доступно; либо используйте `run_user.sh`.
 
 ## Структура
 ```
 code-sync/
   README.md
+  remote-ide/
+    install_code_server_home.sh
+    start_tunnel_localhostrun.sh
   syncthing/
-    install_syncthing_linux.sh
-    syncthing_service_enable.sh
-  tailscale/
-    install_tailscale_linux.sh
-  git/
-    setup_home_git_server.sh
-    add_remote_on_work.sh
+    install_syncthing_user.sh
+    run_user.sh
+  # предыдущие файлы оставлены для совместимости:
+  syncthing/install_syncthing_linux.sh
+  syncthing/syncthing_service_enable.sh
+  tailscale/install_tailscale_linux.sh
+  git/setup_home_git_server.sh
+  git/add_remote_on_work.sh
 ```
 
 ## Безопасность
-- Syncthing: сквозное шифрование, доступ только между доверенными устройствами.
-- Tailscale: приватная сеть, доступ только вашим устройствам; Git‑пользователь без shell.
-
-## Подсказки
-- На рабочем ПК может быть запрет на установку ПО. В таком случае используйте портативные версии (Syncthing), или Git через уже установленный SSH.
-- Для Syncthing, если прямое соединение не получается, включены реле‑сервера по умолчанию — обычно работает без доп. настроек.
+- Удалённый IDE: защищён паролем, URL не публично известен. Для большего уровня — включайте авторизацию по токенам/прокси/Zero Trust.
+- Syncthing: сквозное шифрование между доверенными устройствами.
